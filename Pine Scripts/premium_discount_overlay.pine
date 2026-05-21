@@ -1,0 +1,164 @@
+//@version=6
+indicator('Premium/Discount Overlay (MA + Anchored VWAP + Regression Channel)', overlay = true, max_labels_count = 500)
+
+// ═══════════════════════════════════════════════════════════════════
+// INPUTS
+// ═══════════════════════════════════════════════════════════════════
+
+// --- Calendar anchor ---
+// Express SMA lengths as fractions of a trading year so the 42/200
+// relationship stays proportionally stable regardless of how many
+// sessions the year actually contains (252 stocks, 365 crypto, etc.).
+daysPerYear = input.int(252, 'Trading Days Per Year', minval = 1, group = 'Moving Averages',
+     tooltip = 'Set to 252 for stocks/futures, 365 for crypto. SMA lengths scale with this value.')
+
+fracSMA1 = input.float(0.167, 'SMA Fast (fraction of year)', step = 0.001, minval = 0.001, group = 'Moving Averages',
+     tooltip = 'Default 0.167 × 252 ≈ 42 bars. Increase for slower response.')
+fracSMA2 = input.float(0.794, 'SMA Slow (fraction of year)', step = 0.001, minval = 0.001, group = 'Moving Averages',
+     tooltip = 'Default 0.794 × 252 ≈ 200 bars. Acts as the long-term trend backbone.')
+
+lenSMA1 = math.max(1, math.round(fracSMA1 * daysPerYear))
+lenSMA2 = math.max(1, math.round(fracSMA2 * daysPerYear))
+
+// --- Regression channel ---
+regLen  = input.int(150,  'Regression Length (bars)',       minval = 20, group = 'Regression Channel',
+     tooltip = 'Long lookback keeps channel calm for swing / long-term use.')
+regMult = input.float(2.0, 'Regression Deviation Multiplier', step = 0.1, group = 'Regression Channel',
+     tooltip = 'Wider = fewer signals; narrower = more signals.')
+
+// --- Anchored VWAP ---
+useAVWAP1 = input.bool(true,  'Show Anchored VWAP #1', group = 'Anchored VWAP')
+anchor1    = input.time(timestamp('01 Jan 2023 00:00 +0000'), 'Anchor #1 (UTC)', confirm = true, group = 'Anchored VWAP')
+useAVWAP2  = input.bool(false, 'Show Anchored VWAP #2', group = 'Anchored VWAP')
+anchor2    = input.time(timestamp('01 Jan 2024 00:00 +0000'), 'Anchor #2 (UTC)', confirm = true, group = 'Anchored VWAP')
+
+// --- Zone detection ---
+showTags   = input.bool(true,  'Show zone-entry labels',         group = 'Zone Detection')
+premPctRef = input.float(0.15, 'Premium vs Slow SMA threshold',  step = 0.01, group = 'Zone Detection',
+     tooltip = '0.15 = price must be ≥ +15% above slow SMA to count as Premium.')
+
+// ═══════════════════════════════════════════════════════════════════
+// COLORS
+// ═══════════════════════════════════════════════════════════════════
+
+colSMA1   = color.new(color.rgb(0,   180, 255), 25)   // cyan, translucent
+colSMA2   = color.new(color.rgb(255, 215,   0), 25)   // gold, translucent
+colAVWAP  = color.new(color.rgb(180,   0, 255), 25)   // violet, translucent
+colReg    = color.new(color.rgb(255, 140,   0), 70)   // amber fill
+colRegLn  = color.new(color.rgb(255, 140,   0), 25)   // amber line
+
+// ═══════════════════════════════════════════════════════════════════
+// MOVING AVERAGES & REGRESSION CHANNEL
+// ═══════════════════════════════════════════════════════════════════
+
+smaFast = ta.sma(close, lenSMA1)
+smaSlow = ta.sma(close, lenSMA2)
+
+regBasis = ta.linreg(close, regLen, 0)
+residual = close - regBasis
+resStdev = ta.stdev(residual, regLen)
+upperCh  = regBasis + regMult * resStdev
+lowerCh  = regBasis - regMult * resStdev
+
+// ═══════════════════════════════════════════════════════════════════
+// ANCHORED VWAP
+// Functions are always called unconditionally so var state never
+// desyncs — toggle is applied at the plot/assignment level instead.
+// ═══════════════════════════════════════════════════════════════════
+
+tp = hlc3
+
+f_avwap(_anchorTime) =>
+    var float cumPV = na
+    var float cumV  = na
+    if barstate.isfirst
+        cumPV := na
+        cumV  := na
+    if time >= _anchorTime
+        cumPV := nz(cumPV[1]) + tp * volume
+        cumV  := nz(cumV[1])  + volume
+    else
+        cumPV := na
+        cumV  := na
+    cumPV / cumV
+
+avwap1Raw = f_avwap(anchor1)
+avwap2Raw = f_avwap(anchor2)
+
+avwap1 = useAVWAP1 ? avwap1Raw : na
+avwap2 = useAVWAP2 ? avwap2Raw : na
+
+// ═══════════════════════════════════════════════════════════════════
+// ZONE LOGIC
+// ═══════════════════════════════════════════════════════════════════
+
+pctFrom200 = (close - smaSlow) / smaSlow
+
+isPremium  = pctFrom200 > premPctRef and close > upperCh
+isDiscount = close < lowerCh or pctFrom200 < -premPctRef
+
+// Track zone entry: only flag the FIRST bar entering a zone
+var bool prevPremium  = false
+var bool prevDiscount = false
+
+enteredPremium  = isPremium  and not prevPremium
+enteredDiscount = isDiscount and not prevDiscount
+
+prevPremium  := isPremium
+prevDiscount := isDiscount
+
+// ═══════════════════════════════════════════════════════════════════
+// BACKGROUND ZONE SHADING
+// ═══════════════════════════════════════════════════════════════════
+
+bgCol = isPremium  ? color.new(color.red,   91) :
+        isDiscount ? color.new(color.green, 91) : na
+
+bgcolor(bgCol, title = 'Zone Background')
+
+// ═══════════════════════════════════════════════════════════════════
+// PLOTS
+// ═══════════════════════════════════════════════════════════════════
+
+pSMA2  = plot(smaSlow,  'SMA Slow (' + str.tostring(lenSMA2) + ')', colSMA2,   2)
+pSMA1  = plot(smaFast,  'SMA Fast (' + str.tostring(lenSMA1) + ')', colSMA1,   2)
+
+pRegB  = plot(regBasis, 'Reg Basis',  colRegLn, 2)
+pRegU  = plot(upperCh,  'Reg Upper',  colRegLn, 1)
+pRegL  = plot(lowerCh,  'Reg Lower',  colRegLn, 1)
+fill(pRegU, pRegL, color = colReg, title = 'Regression Channel Fill')
+
+plot(avwap1, 'Anchored VWAP #1', color = colAVWAP,                       linewidth = 2)
+plot(avwap2, 'Anchored VWAP #2', color = color.new(colAVWAP, 45), linewidth = 2, style = plot.style_linebr)
+
+// ═══════════════════════════════════════════════════════════════════
+// ZONE-ENTRY LABELS  (one label per zone entry, with % context)
+// ═══════════════════════════════════════════════════════════════════
+
+if showTags and barstate.isconfirmed
+    pctVal = math.round(pctFrom200 * 100, 1)
+    sign   = pctVal >= 0 ? '+' : ''
+    pctStr = sign + str.tostring(pctVal) + '%'
+
+    if enteredDiscount
+        label.new(bar_index, low, 'Discount ' + pctStr,
+             color     = color.new(color.rgb(0, 150, 0), 70),
+             style     = label.style_label_up,
+             textcolor = color.white,
+             size      = size.tiny)
+
+    if enteredPremium
+        label.new(bar_index, high, 'Premium ' + pctStr,
+             color     = color.new(color.rgb(150, 0, 0), 70),
+             style     = label.style_label_down,
+             textcolor = color.white,
+             size      = size.tiny)
+
+// ═══════════════════════════════════════════════════════════════════
+// ALERTS  (fire on zone entry only, not on every bar inside zone)
+// ═══════════════════════════════════════════════════════════════════
+
+alertcondition(enteredDiscount, title = 'Entered Discount Zone',
+     message = 'Discount Zone Entry: price dropped below regression lower band or is ≥ threshold below SMA Slow.')
+alertcondition(enteredPremium,  title = 'Entered Premium Zone',
+     message = 'Premium Zone Entry: price is above regression upper band and ≥ threshold above SMA Slow.')
