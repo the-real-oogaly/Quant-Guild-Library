@@ -109,8 +109,8 @@ bgcolor(isPremium ? color.new(color.red, 91) : isDiscount ? color.new(color.gree
 // PLOTS
 // ═══════════════════════════════════════════════════════════════════
 
-pSMA2 = plot(smaSlow,  'SMA Slow (' + str.tostring(lenSMA2) + ')', colSMA2,  2)
-pSMA1 = plot(smaFast,  'SMA Fast (' + str.tostring(lenSMA1) + ')', colSMA1,  2)
+pSMA2 = plot(smaSlow,  'SMA Slow', colSMA2,  2)
+pSMA1 = plot(smaFast,  'SMA Fast', colSMA1,  2)
 
 pRegB = plot(regBasis, 'Reg Basis',  colRegLn, 2)
 pRegU = plot(upperCh,  'Reg Upper',  colRegLn, 1)
