@@ -33,9 +33,11 @@ useAVWAP2  = input.bool(false, 'Show Anchored VWAP #2', group = 'Anchored VWAP')
 anchor2    = input.time(timestamp('01 Jan 2024 00:00 +0000'), 'Anchor #2 (UTC)', confirm = true, group = 'Anchored VWAP')
 
 // --- Zone detection ---
-showTags   = input.bool(true,  'Show zone-entry labels',         group = 'Zone Detection')
-premPctRef = input.float(0.15, 'Premium vs Slow SMA threshold',  step = 0.01, group = 'Zone Detection',
+showTags      = input.bool(true,  'Show zone-entry labels',         group = 'Zone Detection')
+premPctRef    = input.float(0.15, 'Premium vs Slow SMA threshold',  step = 0.01, group = 'Zone Detection',
      tooltip = '0.15 = price must be ≥ +15% above slow SMA to count as Premium.')
+labelCooldown = input.int(20, 'Min bars between labels', minval = 1, group = 'Zone Detection',
+     tooltip = 'Prevents label clustering on fast timeframes. Raise this on 1m–5m charts.')
 
 // ═══════════════════════════════════════════════════════════════════
 // COLORS
@@ -133,26 +135,31 @@ plot(avwap2, 'Anchored VWAP #2', color = color.new(colAVWAP, 45), linewidth = 2,
 
 // ═══════════════════════════════════════════════════════════════════
 // ZONE-ENTRY LABELS  (one label per zone entry, with % context)
+// Cooldown prevents clustering on fast/noisy timeframes.
 // ═══════════════════════════════════════════════════════════════════
 
-if showTags and barstate.isconfirmed
-    pctVal = math.round(pctFrom200 * 100, 1)
-    sign   = pctVal >= 0 ? '+' : ''
-    pctStr = sign + str.tostring(pctVal) + '%'
+var int lastDiscountBar = na
+var int lastPremiumBar  = na
 
-    if enteredDiscount
+if showTags and barstate.isconfirmed
+    float  pctVal = math.round(pctFrom200 * 100, 1)
+    string pctStr = (pctVal >= 0 ? '+' : '') + str.tostring(pctVal) + '%'
+
+    if enteredDiscount and (na(lastDiscountBar) or bar_index - lastDiscountBar >= labelCooldown)
         label.new(bar_index, low, 'Discount ' + pctStr,
              color     = color.new(color.rgb(0, 150, 0), 70),
              style     = label.style_label_up,
              textcolor = color.white,
              size      = size.tiny)
+        lastDiscountBar := bar_index
 
-    if enteredPremium
+    if enteredPremium and (na(lastPremiumBar) or bar_index - lastPremiumBar >= labelCooldown)
         label.new(bar_index, high, 'Premium ' + pctStr,
              color     = color.new(color.rgb(150, 0, 0), 70),
              style     = label.style_label_down,
              textcolor = color.white,
              size      = size.tiny)
+        lastPremiumBar := bar_index
 
 // ═══════════════════════════════════════════════════════════════════
 // ALERTS  (fire on zone entry only, not on every bar inside zone)
