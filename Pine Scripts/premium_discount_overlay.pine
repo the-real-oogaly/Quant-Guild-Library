@@ -8,8 +8,8 @@ indicator('Premium/Discount Overlay (MA + Anchored VWAP + Regression Channel)', 
 daysPerYear = input.int(252, 'Trading Days Per Year', minval = 1, group = 'Moving Averages',
      tooltip = 'Set to 252 for stocks/futures, 365 for crypto. SMA lengths scale with this value.')
 
-fracSMA1 = input.float(0.167, 'SMA Fast (fraction of year)', step = 0.001, minval = 0.001, group = 'Moving Averages',
-     tooltip = 'Default 0.167 x 252 = 42 bars.')
+fracSMA1 = input.float(0.171, 'SMA Fast (fraction of year)', step = 0.001, minval = 0.001, group = 'Moving Averages',
+     tooltip = 'Default 0.171 x 252 = 43 bars.')
 fracSMA2 = input.float(0.794, 'SMA Slow (fraction of year)', step = 0.001, minval = 0.001, group = 'Moving Averages',
      tooltip = 'Default 0.794 x 252 = 200 bars.')
 
@@ -18,7 +18,7 @@ lenSMA2 = math.max(1, math.round(fracSMA2 * daysPerYear))
 
 regLen  = input.int(150, 'Regression Length (bars)', minval = 20, group = 'Regression Channel',
      tooltip = 'Long lookback keeps channel calm for swing / long-term use.')
-regMult = input.float(2.0, 'Regression Deviation Multiplier', step = 0.1, group = 'Regression Channel',
+regMult = input.float(1.5, 'Regression Deviation Multiplier', step = 0.1, group = 'Regression Channel',
      tooltip = 'Wider = fewer signals; narrower = more signals.')
 
 useAVWAP1 = input.bool(true,  'Show Anchored VWAP #1', group = 'Anchored VWAP')
