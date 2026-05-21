@@ -5,16 +5,8 @@ indicator('Premium/Discount Overlay (MA + Anchored VWAP + Regression Channel)', 
 // INPUTS
 // ═══════════════════════════════════════════════════════════════════
 
-daysPerYear = input.int(252, 'Trading Days Per Year', minval = 1, group = 'Moving Averages',
-     tooltip = 'Set to 252 for stocks/futures, 365 for crypto. SMA lengths scale with this value.')
-
-fracSMA1 = input.float(0.171, 'SMA Fast (fraction of year)', step = 0.001, minval = 0.001, group = 'Moving Averages',
-     tooltip = 'Default 0.171 x 252 = 43 bars.')
-fracSMA2 = input.float(0.794, 'SMA Slow (fraction of year)', step = 0.001, minval = 0.001, group = 'Moving Averages',
-     tooltip = 'Default 0.794 x 252 = 200 bars.')
-
-lenSMA1 = math.max(1, math.round(fracSMA1 * daysPerYear))
-lenSMA2 = math.max(1, math.round(fracSMA2 * daysPerYear))
+lenSMA1 = input.int(43,  'SMA Fast', minval = 1, group = 'Moving Averages', tooltip = 'Fast moving average length in bars.')
+lenSMA2 = input.int(200, 'SMA Slow', minval = 1, group = 'Moving Averages', tooltip = 'Slow moving average length in bars.')
 
 regLen  = input.int(150, 'Regression Length (bars)', minval = 20, group = 'Regression Channel',
      tooltip = 'Long lookback keeps channel calm for swing / long-term use.')
@@ -111,8 +103,8 @@ bgcolor(isPremium ? color.new(color.red, 91) : isDiscount ? color.new(color.gree
 // PLOTS
 // ═══════════════════════════════════════════════════════════════════
 
-pSMA2 = plot(smaSlow,  'SMA 200',   colSMA2,     2)
-pSMA1 = plot(smaFast,  'SMA 50',    colSMA1,     2)
+pSMA2 = plot(smaSlow,  'SMA Slow',  colSMA2,     2)
+pSMA1 = plot(smaFast,  'SMA Fast',  colSMA1,     2)
 
 pRegB = plot(regBasis, 'Reg Basis', colRegBasis, 2)
 pRegU = plot(upperCh,  'Reg Upper', colRegUpper, 1)
