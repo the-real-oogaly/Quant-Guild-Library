@@ -36,11 +36,13 @@ labelCooldown = input.int(20, 'Min bars between labels', minval = 1, group = 'Zo
 // COLORS
 // ═══════════════════════════════════════════════════════════════════
 
-colSMA1  = color.new(color.rgb(0,   180, 255), 25)
-colSMA2  = color.new(color.rgb(255, 215,   0), 25)
-colAVWAP = color.new(color.rgb(180,   0, 255), 25)
-colReg   = color.new(color.rgb(255, 140,   0), 70)
-colRegLn = color.new(color.rgb(255, 140,   0), 25)
+colSMA2     = color.new(color.rgb( 33, 150, 243),  0)  // blue  — slow SMA 200
+colSMA1     = color.new(color.rgb(255, 179,   0),  0)  // gold  — fast SMA 50
+colAVWAP    = color.new(color.rgb(180,   0, 255), 25)  // violet — anchored VWAP
+colRegFill  = color.new(color.rgb(255, 140,   0), 85)  // amber fill, very translucent
+colRegBasis = color.new(color.rgb(158, 158, 158),  0)  // gray  — regression midline
+colRegUpper = color.new(color.rgb( 76, 175,  80),  0)  // green — upper band
+colRegLower = color.new(color.rgb(244,  67,  54),  0)  // red   — lower band
 
 // ═══════════════════════════════════════════════════════════════════
 // MOVING AVERAGES & REGRESSION CHANNEL
@@ -109,13 +111,13 @@ bgcolor(isPremium ? color.new(color.red, 91) : isDiscount ? color.new(color.gree
 // PLOTS
 // ═══════════════════════════════════════════════════════════════════
 
-pSMA2 = plot(smaSlow,  'SMA Slow', colSMA2,  2)
-pSMA1 = plot(smaFast,  'SMA Fast', colSMA1,  2)
+pSMA2 = plot(smaSlow,  'SMA 200',   colSMA2,     2)
+pSMA1 = plot(smaFast,  'SMA 50',    colSMA1,     2)
 
-pRegB = plot(regBasis, 'Reg Basis',  colRegLn, 2)
-pRegU = plot(upperCh,  'Reg Upper',  colRegLn, 1)
-pRegL = plot(lowerCh,  'Reg Lower',  colRegLn, 1)
-fill(pRegU, pRegL, color = colReg, title = 'Regression Channel Fill')
+pRegB = plot(regBasis, 'Reg Basis', colRegBasis, 2)
+pRegU = plot(upperCh,  'Reg Upper', colRegUpper, 1)
+pRegL = plot(lowerCh,  'Reg Lower', colRegLower, 1)
+fill(pRegU, pRegL, color = colRegFill, title = 'Regression Channel Fill')
 
 plot(avwap1, 'Anchored VWAP #1', color = colAVWAP,                     linewidth = 2)
 plot(avwap2, 'Anchored VWAP #2', color = color.new(colAVWAP, 45), linewidth = 2, style = plot.style_linebr)
