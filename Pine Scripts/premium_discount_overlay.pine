@@ -113,8 +113,7 @@ prevDiscount := isDiscount
 // BACKGROUND ZONE SHADING
 // ═══════════════════════════════════════════════════════════════════
 
-bgCol = isPremium  ? color.new(color.red,   91) :
-        isDiscount ? color.new(color.green, 91) : na
+bgCol = isPremium ? color.new(color.red, 91) : isDiscount ? color.new(color.green, 91) : na
 
 bgcolor(bgCol, title = 'Zone Background')
 
